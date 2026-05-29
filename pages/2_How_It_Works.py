@@ -3,8 +3,8 @@ import streamlit as st
 st.title("How It Works")
 st.markdown("---")
 
-st.header("YOLOv8 Nano Model")
-st.write("The application uses a YOLOv8 nano model trained on chromosome images. This is a state-of-the-art object detection architecture optimized for accuracy and speed.")
+st.header("YOLO26 Model")
+st.write("The application uses a YOLO26 model trained on chromosome images. This is a object detection architecture optimized for accuracy and speed.")
 
 st.subheader("24-Class Karyotype Classification")
 st.write("The model classifies chromosomes into 24 categories based on standard karyotype groups:")
@@ -26,7 +26,7 @@ for group, description in classes:
 st.subheader("Detection Workflow")
 st.write("1. **Upload Image**: User uploads a chromosome microscopy image")
 st.write("2. **Preprocessing**: Image is resized to 640x640 pixels")
-st.write("3. **Inference**: YOLOv8 model performs object detection")
+st.write("3. **Inference**: YOLO26 model performs object detection")
 st.write("4. **Post-processing**: Bounding boxes and class labels are generated")
 st.write("5. **Results Display**: Detections shown with confidence scores")
 

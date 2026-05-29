@@ -1,10 +1,10 @@
 # Chromosome Abnormality Detector
 
-A Streamlit application that detects and classifies chromosomes from microscope images using YOLOv8.
+A Streamlit application that detects and classifies chromosomes from microscope images using YOLO26.
 
 ## Model
 
-- **Architecture**: YOLOv8 Nano (yolo26n)
+- **Architecture**: YOLO26
 - **Classes**: 24 karyotype groups (A1-A3, B4-B5, C6-C12, D13-D15, E16-E18, F19-F20, G21-G22, X, Y)
 
 ## Installation

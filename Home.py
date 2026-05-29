@@ -7,13 +7,10 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-st.sidebar.title("Navigation")
-st.sidebar.info("Use the pages above to navigate through the app.")
-
 st.title("Chromosome Abnormality Detector")
 st.markdown("---")
 st.header("Welcome to the Chromosome Abnormality Detection App")
-st.write("This application uses a deep learning model (YOLOv8) to detect and classify chromosomes from microscope images.")
+st.write("This application uses a deep learning model (YOLO26) to detect and classify chromosomes from microscope images.")
 st.write("It can identify 24 different chromosome types based on the standard karyotype classification system.")
 
 st.markdown("### Quick Links")
