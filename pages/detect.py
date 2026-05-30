@@ -25,6 +25,13 @@ def _cv2_to_pil(cv2_img):
     return Image.fromarray(cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB))
 
 
+def _img_to_base64(pil_img):
+    import base64
+    buf = io.BytesIO()
+    pil_img.save(buf, format="PNG")
+    return base64.b64encode(buf.getvalue()).decode()
+
+
 def _run_detection(image_cv2, model, conf_threshold, dtw_threshold):
     from dtw_similarity import ChromosomeDTW
     from classifier import ChromosomeClassifier
@@ -48,11 +55,10 @@ def _run_detection(image_cv2, model, conf_threshold, dtw_threshold):
             x1, y1, x2, y2 = map(int, box)
             name = CHROMOSOME_NAMES.get(cls_id, f"cls_{cls_id}")
 
-            # Crop
-            pad = 5
+            # Crop - no extra padding
             h, w = image_cv2.shape[:2]
-            cx1 = max(0, x1 - pad); cy1 = max(0, y1 - pad)
-            cx2 = min(w, x2 + pad); cy2 = min(h, y2 + pad)
+            cx1 = max(0, x1); cy1 = max(0, y1)
+            cx2 = min(w, x2); cy2 = min(h, y2)
             crop = image_cv2[cy1:cy2, cx1:cx2]
 
             if cls_id not in detections:
@@ -168,15 +174,78 @@ def render(CLR_PURPLE, CLR_PURPLE_LIGHT, CLR_GREEN, CLR_GREEN_LIGHT,
                 st.error(f"Could not load YOLO model: {e}\n\nEnsure `best.pt` is in the working directory.")
                 return
 
-            # ── Run inference ─────────────────────────────────────────────────
-            with st.spinner("Running YOLO detection + DTW classification…"):
-                try:
-                    annotated_cv2, detections, classification = _run_detection(
-                        image_cv2, model, conf_threshold, dtw_threshold
-                    )
-                except Exception as e:
-                    st.error(f"Detection failed: {e}")
-                    return
+            # ── Step-by-step inference with progress ─────────────────────────
+            from dtw_similarity import ChromosomeDTW
+            from classifier import ChromosomeClassifier
+
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+
+            # Step 1: YOLO prediction
+            status_text.markdown("**🔍 Predicting with YOLO…**")
+            predictions = model.predict(image_cv2, conf=conf_threshold, verbose=False)
+            progress_bar.progress(20)
+            num_detected = len(predictions[0].boxes) if predictions and predictions[0].boxes is not None else 0
+            status_text.markdown(f"**🔍 Predicting with YOLO…** `{num_detected} chromosomes detected`")
+
+            # Step 2: Drawing bounding boxes and extracting crops
+            status_text.markdown("**✂️ Extracting chromosome crops…**")
+            annotated = image_cv2.copy()
+            detections = {}
+
+            if predictions and predictions[0].boxes is not None:
+                boxes   = predictions[0].boxes.xyxy.cpu().numpy()
+                classes = predictions[0].boxes.cls.cpu().numpy()
+                confs   = predictions[0].boxes.conf.cpu().numpy()
+
+                for box, cls, conf in zip(boxes, classes, confs):
+                    cls_id = int(cls)
+                    x1, y1, x2, y2 = map(int, box)
+                    name = CHROMOSOME_NAMES.get(cls_id, f"cls_{cls_id}")
+
+                    h, w = image_cv2.shape[:2]
+                    cx1 = max(0, x1); cy1 = max(0, y1)
+                    cx2 = min(w, x2); cy2 = min(h, y2)
+                    crop = image_cv2[cy1:cy2, cx1:cx2]
+
+                    if cls_id not in detections:
+                        detections[cls_id] = []
+                    detections[cls_id].append({"box": box.tolist(), "image": crop})
+
+                    cv2.rectangle(annotated, (x1, y1), (x2, y2), (124, 58, 237), 2)
+                    label = f"{name} {conf:.2f}"
+                    (lw, lh), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.45, 1)
+                    cv2.rectangle(annotated, (x1, y1 - lh - 6), (x1 + lw + 4, y1), (124, 58, 237), -1)
+                    cv2.putText(annotated, label, (x1 + 2, y1 - 3),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1)
+            progress_bar.progress(50)
+
+            # Step 3: DTW similarity checking
+            status_text.markdown("**🧬 Running DTW similarity check…**")
+            dtw_engine = ChromosomeDTW(threshold=dtw_threshold)
+            classifier = ChromosomeClassifier(dtw_engine)
+
+            # Count pairs that need checking (classes with exactly 2 chromosomes)
+            pairs_to_check = [cls_id for cls_id, items in detections.items() if len(items) == 2 and cls_id not in [22, 23]]
+            total_pairs = len(pairs_to_check)
+
+            if total_pairs > 0:
+                for i, cls_id in enumerate(pairs_to_check, 1):
+                    pair_name = CHROMOSOME_NAMES.get(cls_id, f"cls_{cls_id}")
+                    status_text.markdown(f"**🧬 DTW similarity check `{i}/{total_pairs}`** — `{pair_name}`")
+                    img1 = detections[cls_id][0]["image"]
+                    img2 = detections[cls_id][1]["image"]
+                    dtw_engine.is_similar(img1, img2)
+                    progress_bar.progress(50 + int((i / total_pairs) * 50))
+            progress_bar.progress(100)
+
+            # Final classification
+            status_text.markdown("**✅ Classification complete!**")
+            classification = classifier.classify(detections)
+
+            # Clear progress indicators
+            progress_bar.empty()
+            status_text.empty()
 
             st.markdown("<hr class='kdivider'/>", unsafe_allow_html=True)
             st.markdown(f"""
@@ -196,7 +265,7 @@ def render(CLR_PURPLE, CLR_PURPLE_LIGHT, CLR_GREEN, CLR_GREEN_LIGHT,
             with img_col2:
                 st.markdown(f"<div class='muted mono' style='margin-bottom:0.4rem;'>DETECTION OUTPUT</div>",
                             unsafe_allow_html=True)
-                st.image(_cv2_to_pil(annotated_cv2), use_container_width=True)
+                st.image(_cv2_to_pil(annotated), use_container_width=True)
 
             st.markdown("<hr class='kdivider'/>", unsafe_allow_html=True)
 
@@ -367,6 +436,53 @@ def render(CLR_PURPLE, CLR_PURPLE_LIGHT, CLR_GREEN, CLR_GREEN_LIGHT,
                                         margin-top:0.25rem;'>{desc}</div>
                         </div>
                         """, unsafe_allow_html=True)
+
+                        # Show cropped images for structural abnormalities (DTW similarity failure)
+                        if item.get("dtw_similarity") is not None and item["count"] == 2:
+                            cls_id = item["class_id"]
+                            dtw_score = item["dtw_similarity"]
+
+                            # Get the two cropped chromosome images
+                            if cls_id in detections and len(detections[cls_id]) == 2:
+                                chrom1_img = detections[cls_id][0]["image"]
+                                chrom2_img = detections[cls_id][1]["image"]
+
+                                chrom1_pil = _cv2_to_pil(chrom1_img)
+                                chrom2_pil = _cv2_to_pil(chrom2_img)
+
+                                st.markdown(f"""
+                                <div style='margin:0.75rem 0 0.5rem 0;padding:0.5rem;
+                                            background:{CLR_SURFACE};border-radius:6px;
+                                            border:1px solid {CLR_BORDER};'>
+                                    <div style='font-family:Space Mono,monospace;font-size:0.75rem;
+                                                color:{CLR_TEXT_MUTED};margin-bottom:0.5rem;'>
+                                        Pair Comparison &nbsp;·&nbsp; DTW Score: <span style='color:{CLR_PURPLE_LIGHT};'>{dtw_score:.4f}</span>
+                                        &nbsp;·&nbsp; <span style='color:#F0FDF4;'>User Review Required</span>
+                                    </div>
+                                """, unsafe_allow_html=True)
+
+                                img_col1, img_col2 = st.columns([1, 1])
+                                with img_col1:
+                                    st.markdown(f"""
+                                    <div style='width:100%;display:flex;flex-direction:column;align-items:center;'>
+                                        <div style='font-family:Space Mono,monospace;font-size:0.72rem;color:{CLR_TEXT_MUTED};margin-bottom:0.25rem;'>{item['name']} - 1</div>
+                                        <div style='border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.3);'>
+                                            <img src="data:image/png;base64,{_img_to_base64(chrom1_pil)}" style="border-radius:6px;display:block;" />
+                                        </div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+
+                                with img_col2:
+                                    st.markdown(f"""
+                                    <div style='width:100%;display:flex;flex-direction:column;align-items:center;'>
+                                        <div style='font-family:Space Mono,monospace;font-size:0.72rem;color:{CLR_TEXT_MUTED};margin-bottom:0.25rem;'>{item['name']} - 2</div>
+                                        <div style='border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.3);'>
+                                            <img src="data:image/png;base64,{_img_to_base64(chrom2_pil)}" style="border-radius:6px;display:block;" />
+                                        </div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+
+                                st.markdown("</div>", unsafe_allow_html=True)
                 else:
                     st.markdown(f"<div class='muted'>No ambiguous chromosomes flagged.</div>",
                                 unsafe_allow_html=True)

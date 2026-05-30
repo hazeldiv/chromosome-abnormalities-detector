@@ -2,3 +2,5 @@
 .claude
 .vscode
 dataset/
+__pycache__
+pages/__pycache__
