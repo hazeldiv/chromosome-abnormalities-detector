@@ -103,7 +103,7 @@ def render(CLR_PURPLE, CLR_PURPLE_LIGHT, CLR_GREEN, CLR_GREEN_LIGHT,
     with s_col1:
         conf_threshold = st.slider(
             "Confidence Threshold",
-            min_value=0.05, max_value=0.95, value=0.25, step=0.05,
+            min_value=0.05, max_value=0.95, value=0.3, step=0.05,
             help="Minimum YOLO confidence score to accept a detection."
         )
     with s_col2:
@@ -218,7 +218,7 @@ def render(CLR_PURPLE, CLR_PURPLE_LIGHT, CLR_GREEN, CLR_GREEN_LIGHT,
                     cv2.rectangle(annotated, (x1, y1 - lh - 6), (x1 + lw + 4, y1), (124, 58, 237), -1)
                     cv2.putText(annotated, label, (x1 + 2, y1 - 3),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1)
-            progress_bar.progress(50)
+            progress_bar.progress(20)
 
             # Step 3: DTW similarity checking
             status_text.markdown("**🧬 Running DTW similarity check…**")
@@ -236,13 +236,12 @@ def render(CLR_PURPLE, CLR_PURPLE_LIGHT, CLR_GREEN, CLR_GREEN_LIGHT,
                     img1 = detections[cls_id][0]["image"]
                     img2 = detections[cls_id][1]["image"]
                     dtw_engine.is_similar(img1, img2)
-                    progress_bar.progress(50 + int((i / total_pairs) * 50))
-            progress_bar.progress(100)
+                    progress_bar.progress(20 + int((i / total_pairs) * 70))
 
             # Final classification
-            status_text.markdown("**✅ Classification complete!**")
+            status_text.markdown("**✅ Showing result!**")
             classification = classifier.classify(detections)
-
+            progress_bar.progress(100)
             # Clear progress indicators
             progress_bar.empty()
             status_text.empty()
@@ -490,7 +489,7 @@ def render(CLR_PURPLE, CLR_PURPLE_LIGHT, CLR_GREEN, CLR_GREEN_LIGHT,
             # ── Download annotated image ──────────────────────────────────────
             st.markdown("<hr class='kdivider'/>", unsafe_allow_html=True)
             buf = io.BytesIO()
-            _cv2_to_pil(annotated_cv2).save(buf, format="PNG")
+            _cv2_to_pil(annotated).save(buf, format="PNG")
             st.download_button(
                 label="⬇️  Download Annotated Image",
                 data=buf.getvalue(),

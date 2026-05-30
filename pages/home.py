@@ -93,9 +93,9 @@ def render(CLR_PURPLE, CLR_PURPLE_LIGHT, CLR_GREEN, CLR_GREEN_LIGHT,
 
     with right:
         st.markdown(f"""
-        <div class='kcard-accent'>
+        <div class='kcard'>
             <div style='font-family:Space Mono,monospace;font-size:1rem;
-                        color:{CLR_GREEN_LIGHT};margin-bottom:0.75rem;'>
+                        color:{CLR_PURPLE_LIGHT};margin-bottom:0.75rem;'>
                 ⚡ How KaryoScan Helps
             </div>
             <div style='color:{CLR_TEXT_MUTED};font-size:0.9rem;line-height:1.7;'>

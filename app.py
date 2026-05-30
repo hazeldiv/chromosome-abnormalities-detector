@@ -231,6 +231,86 @@ h1, h2, h3 {{
     background:{CLR_PURPLE} !important;
 }}
 
+/* File uploader - force dark theme */
+[data-testid="stFileUploader"] {{
+    background:{CLR_SURFACE2} !important;
+    border:2px dashed {CLR_PURPLE} !important;
+    border-radius:10px !important;
+}}
+[data-testid="stFileUploader"] label {{
+    color:{CLR_TEXT_MUTED} !important;
+}}
+[data-testid="stFileUploader"] div {{
+    color:{CLR_TEXT_MUTED} !important;
+}}
+
+/* Button - force dark theme */
+.stButton > button {{
+    background:{CLR_PURPLE} !important;
+    color:#fff !important;
+    border:none !important;
+}}
+.stButton > button:hover {{
+    background:{CLR_PURPLE_LIGHT} !important;
+}}
+
+/* Image captions */
+[data-testid="stImage"] figcaption {{
+    color:{CLR_TEXT_MUTED} !important;
+    font-size:0.85rem !important;
+}}
+
+/* Selectbox/Dropdown */
+[data-testid="stSelectbox"] {{
+    background:{CLR_SURFACE} !important;
+}}
+[data-testid="stSelectbox"] label {{
+    color:{CLR_TEXT_MUTED} !important;
+}}
+[data-testid="stSelectbox"] > div > div {{
+    background:{CLR_SURFACE2} !important;
+    color:{CLR_TEXT} !important;
+    border:1px solid {CLR_BORDER} !important;
+}}
+
+/* Number input */
+[data-testid="stNumberInput"] {{
+    background:{CLR_SURFACE2} !important;
+}}
+
+/* Tabs */
+[data-testid="stTab"] {{
+    background:{CLR_SURFACE} !important;
+    color:{CLR_TEXT_MUTED} !important;
+}}
+[data-testid="stTab"][aria-selected="true"] {{
+    background:{CLR_SURFACE2} !important;
+    color:{CLR_PURPLE_LIGHT} !important;
+}}
+
+/* Expander */
+ details {{
+    background:{CLR_SURFACE} !important;
+    border:1px solid {CLR_BORDER} !important;
+    border-radius:8px !important;
+}}
+ details summary {{
+    color:{CLR_TEXT} !important;
+}}
+ details > div {{
+    color:{CLR_TEXT_MUTED} !important;
+}}
+
+/* Progress bar */
+.stProgress > div > div > div {{
+    background:{CLR_PURPLE} !important;
+}}
+
+/* Spinner text */
+.stSpinner > div {{
+    color:{CLR_PURPLE_LIGHT} !important;
+}}
+
 /* Muted text helper */
 .muted {{color:{CLR_TEXT_MUTED};font-size:0.88rem;}}
 .mono {{font-family:'Space Mono',monospace;}}
